@@ -3,8 +3,9 @@
 import { useEffect, useState } from 'react'
 import Markdown from 'react-markdown'
 import { supabase } from '@/client/supabaseClient'
-import { ALargeSmall, Baseline, Bookmark, Languages, Search } from 'lucide-react'
-import PAGE_SIZE from '@/utils/pageSplit'
+import { calculateCharactersPerPage } from '@/utils/pageSplit'
+import Header from '@/components/Header'
+import { Slider } from '@/components/ui/slider'
 
 interface MarkdownFile {
   id: number
@@ -18,6 +19,17 @@ export default function Home() {
   const [pages, setPages] = useState<string[]>([])
   const [currentPage, setCurrentPage] = useState<number>(0)
   const [error, setError] = useState<string | null>(null)
+  const [numParagraphs, setNumParagraphs] = useState<number>(1)
+
+  const fontSize = 16
+
+  const updatePageSize = () => {
+    const newSize = calculateCharactersPerPage(fontSize, numParagraphs)
+    if (markdownText) {
+      const splitPages = splitContentIntoPages(markdownText, newSize)
+      setPages(splitPages)
+    }
+  }
 
   useEffect(() => {
     const fetchMarkdown = async () => {
@@ -28,13 +40,23 @@ export default function Home() {
         console.error(error)
       } else if (data) {
         setMarkdownText(data.content)
-        const splitPages = splitContentIntoPages(data.content, PAGE_SIZE)
+        const paragraphCount = 8
+        setNumParagraphs(paragraphCount)
+        const splitPages = splitContentIntoPages(
+          data.content,
+          calculateCharactersPerPage(fontSize, paragraphCount)
+        )
         setPages(splitPages)
       }
     }
 
     fetchMarkdown()
   }, [])
+
+  useEffect(() => {
+    window.addEventListener('resize', updatePageSize)
+    return () => window.removeEventListener('resize', updatePageSize)
+  }, [markdownText, numParagraphs])
 
   const splitContentIntoPages = (content: string, pageSize: number) => {
     const pages = []
@@ -52,40 +74,50 @@ export default function Home() {
     setCurrentPage((prevPage) => (prevPage < pages.length - 1 ? prevPage + 1 : prevPage))
   }
 
+  useEffect(() => {
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'ArrowLeft') {
+        handlePreviousPage()
+      } else if (event.key === 'ArrowRight') {
+        handleNextPage()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [currentPage, pages])
+
   return (
-    <main className="flex h-screen flex-col items-center justify-between px-16 py-8 bg-gray-200">
-      <section className="relative w-full max-w-[1100px] h-full flex bg-gray-700 py-6 px-16 rounded-xl">
-        <div className="absolute z-0 left-[2%] top-[4%] w-[96%] h-[92%] bg-white shadow-[0px_4px_32px_0px_rgba(0,0,0,0.20)] rounded-lg"></div>
-        <div className="absolute z-0 left-[3%] top-[3%] w-[94%] h-[94%] bg-white shadow-[0px_4px_32px_0px_rgba(0,0,0,0.20)] rounded-lg"></div>
-        <div className="absolute z-0 left-[4%] top-[2%] w-[92%] h-[96%] bg-white p-12 flex flex-col space-y-4 shadow-[0px_4px_32px_0px_rgba(0,0,0,0.20)] rounded-lg overflow-hidden shadow-center">
-          <header className="w-full flex justify-between">
-            <h3 className="font-medium text-md">Title</h3>
-            <div className="flex space-x-3">
-              <Search size={20} />
-              <Languages size={20} />
-              <Baseline size={20} />
-            </div>
-          </header>
-          <article className="w-full h-[92%] column-layout columns-2 prose prose-sm dark:prose-invert max-w-none">
-            {error ? <p>{error}</p> : <Markdown>{pages[currentPage]}</Markdown>}
-          </article>
-          <footer className="w-full flex justify-between">
-            <span className="font-medium text-sm">
-              {currentPage + 1} of {pages.length}
-            </span>
-          </footer>
-          <button
-            className="absolute w-[30%] h-full left-0"
-            onClick={handlePreviousPage}
-            disabled={currentPage === 0}
-          ></button>
-          <button
-            className="absolute w-[30%] h-full right-0"
-            onClick={handleNextPage}
-            disabled={currentPage === pages.length - 1}
-          ></button>
-        </div>
+    <main className="w-screen h-screen px-8 py-4 shadow-center space-y-4 overflow-hidden">
+      <Header />
+      <section className="relative w-full max-h-full h-[calc(100%-96px)] flex">
+        <article className="w-full h-full column-layout columns-2 prose dark:prose-invert max-w-none">
+          {error ? <p>{error}</p> : <Markdown>{pages[currentPage]}</Markdown>}
+        </article>
+        <button
+          className="absolute w-[20%] h-full -left-8 border-0 border-l-4 border-transparent hover:border-slate-900 transition-all duration-200 ease-in-out"
+          onClick={handlePreviousPage}
+          disabled={currentPage === 0}
+        ></button>
+        <button
+          className="absolute w-[20%] h-full -right-8 border-0 border-r-4 border-transparent hover:border-slate-900 transition-all duration-200 ease-in-out"
+          onClick={handleNextPage}
+          disabled={currentPage === pages.length - 1}
+        ></button>
       </section>
+      <footer className="w-full h-8 flex justify-between">
+        <Slider
+          value={[currentPage]}
+          max={pages.length - 1}
+          step={1}
+          onValueChange={(value) => setCurrentPage(value[0])}
+        />
+        <span className="font-medium text-sm">
+          {currentPage + 1} of {pages.length}
+        </span>
+      </footer>
     </main>
   )
 }
