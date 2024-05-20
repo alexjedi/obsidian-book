@@ -20,6 +20,7 @@ export default function Home() {
   const [currentPage, setCurrentPage] = useState<number>(0)
   const [error, setError] = useState<string | null>(null)
   const [numParagraphs, setNumParagraphs] = useState<number>(1)
+  const [isSerif, setIsSerif] = useState<boolean>(false)
 
   const fontSize = 16
 
@@ -90,33 +91,41 @@ export default function Home() {
   }, [currentPage, pages])
 
   return (
-    <main className="w-screen h-screen px-8 py-4 shadow-center space-y-4 overflow-hidden">
-      <Header />
-      <section className="relative w-full max-h-full h-[calc(100%-96px)] flex">
-        <article className="w-full h-full column-layout columns-2 prose dark:prose-invert max-w-none">
+    <main className="w-screen h-screen space-y-4 overflow-hidden">
+      <Header setIsSerif={() => setIsSerif(!isSerif)} />
+      <section className="relative w-full max-h-full h-[calc(100%-160px)] flex px-8 shadow-center">
+        <article
+          className={`w-full h-full column-layout columns-2 prose dark:prose-invert max-w-none prose-p:text-gray-900 dark:prose-p:text-gray-50 prose-p:mt-2 prose-p:mb-2 indent-7 ${
+            isSerif ? 'font-serif' : 'font-sans'
+          }`}
+        >
           {error ? <p>{error}</p> : <Markdown>{pages[currentPage]}</Markdown>}
         </article>
         <button
-          className="absolute w-[20%] h-full -left-8 border-0 border-l-4 border-transparent hover:border-slate-900 transition-all duration-200 ease-in-out"
+          className="absolute w-[20%] h-full -left-8 border-0 border-l-4 border-transparent hover:border-gray-900 dark:hover:border-gray-100 transition-all duration-200 ease-in-out"
           onClick={handlePreviousPage}
           disabled={currentPage === 0}
         ></button>
         <button
-          className="absolute w-[20%] h-full -right-8 border-0 border-r-4 border-transparent hover:border-slate-900 transition-all duration-200 ease-in-out"
+          className="absolute w-[20%] h-full -right-8 border-0 border-r-4 border-transparent hover:border-gray-900 dark:hover:border-gray-100 transition-all duration-200 ease-in-out"
           onClick={handleNextPage}
           disabled={currentPage === pages.length - 1}
         ></button>
       </section>
-      <footer className="w-full h-8 flex justify-between">
-        <Slider
-          value={[currentPage]}
-          max={pages.length - 1}
-          step={1}
-          onValueChange={(value) => setCurrentPage(value[0])}
-        />
-        <span className="font-medium text-sm">
-          {currentPage + 1} of {pages.length}
-        </span>
+      <footer className="w-full h-12 flex flex-col justify-center items-center space-y-4 px-8">
+        {/* <div className="w-full flex justify-between">
+          <div className="w-full text-center text-sm font-medium">{currentPage + 1}</div>
+          <div className="w-full text-center text-sm font-medium">{currentPage + 2}</div>
+        </div> */}
+        <div className="w-full flex space-x-4">
+          <Slider
+            value={[currentPage]}
+            max={pages.length - 1}
+            step={1}
+            onValueChange={(value) => setCurrentPage(value[0])}
+          />
+          <span className="text-nowrap text-sm font-medium">4 min</span>
+        </div>
       </footer>
     </main>
   )
